@@ -21,31 +21,35 @@ jobs:
       fail-fast: false
       matrix:
         upgrade:
-          # ── From 9.6 (Stretch-based; needs bullseye for libssl1.1) ────────
-          - { tag: "9.6-to-12",  from: "9.6",  to: "12",  distro: "bullseye" }
-          - { tag: "9.6-to-13",  from: "9.6",  to: "13",  distro: "bullseye" }
-          - { tag: "9.6-to-14",  from: "9.6",  to: "14",  distro: "bullseye" }
-          - { tag: "9.6-to-15",  from: "9.6",  to: "15",  distro: "bullseye" }
-          - { tag: "9.6-to-16",  from: "9.6",  to: "16",  distro: "bullseye" }
-          # ── From 10 (Buster-based; needs bullseye for libssl1.1) ─────────
-          - { tag: "10-to-14",   from: "10",   to: "14",  distro: "bullseye" }
-          - { tag: "10-to-15",   from: "10",   to: "15",  distro: "bullseye" }
-          - { tag: "10-to-16",   from: "10",   to: "16",  distro: "bullseye" }
-          # ── From 11 (Bullseye-based; needs bullseye for libssl1.1) ───────
-          - { tag: "11-to-14",   from: "11",   to: "14",  distro: "bullseye" }
-          - { tag: "11-to-15",   from: "11",   to: "15",  distro: "bullseye" }
-          - { tag: "11-to-16",   from: "11",   to: "16",  distro: "bullseye" }
-          # ── From 12 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
-          - { tag: "12-to-14",   from: "12",   to: "14",  distro: "bookworm" }
-          - { tag: "12-to-15",   from: "12",   to: "15",  distro: "bookworm" }
-          - { tag: "12-to-16",   from: "12",   to: "16",  distro: "bookworm" }
-          # ── From 13 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
-          - { tag: "13-to-15",   from: "13",   to: "15",  distro: "bookworm" }
-          - { tag: "13-to-16",   from: "13",   to: "16",  distro: "bookworm" }
-          # ── From 14 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
-          - { tag: "14-to-16",   from: "14",   to: "16",  distro: "bookworm" }
-          # ── From 15 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
-          - { tag: "15-to-16",   from: "15",   to: "16",  distro: "bookworm" }
+          # ── From 9.6 (EOL, frozen image — no distro suffix) ──────────────
+          # Runtime bullseye for libssl1.1 compatibility with old binaries.
+          - { tag: "9.6-to-12",  from: "9.6",  to: "12",  old_distro: "",          distro: "bullseye" }
+          - { tag: "9.6-to-13",  from: "9.6",  to: "13",  old_distro: "",          distro: "bullseye" }
+          - { tag: "9.6-to-14",  from: "9.6",  to: "14",  old_distro: "",          distro: "bullseye" }
+          - { tag: "9.6-to-15",  from: "9.6",  to: "15",  old_distro: "",          distro: "bullseye" }
+          - { tag: "9.6-to-16",  from: "9.6",  to: "16",  old_distro: "",          distro: "bullseye" }
+          # ── From 10 (EOL, frozen image — no distro suffix) ───────────────
+          - { tag: "10-to-14",   from: "10",   to: "14",  old_distro: "",          distro: "bullseye" }
+          - { tag: "10-to-15",   from: "10",   to: "15",  old_distro: "",          distro: "bullseye" }
+          - { tag: "10-to-16",   from: "10",   to: "16",  old_distro: "",          distro: "bullseye" }
+          # ── From 11 (EOL, frozen image — no distro suffix) ───────────────
+          - { tag: "11-to-14",   from: "11",   to: "14",  old_distro: "",          distro: "bullseye" }
+          - { tag: "11-to-15",   from: "11",   to: "15",  old_distro: "",          distro: "bullseye" }
+          - { tag: "11-to-16",   from: "11",   to: "16",  old_distro: "",          distro: "bullseye" }
+          # ── From 12–15 (active/recent — pin to bookworm to avoid trixie) ─
+          # postgres:12-15 untagged now defaults to Debian trixie (GLIBC 2.38)
+          # but our bookworm runtime only has GLIBC 2.36; pin old image to
+          # bookworm so binaries and runtime share the same GLIBC.
+          - { tag: "12-to-14",   from: "12",   to: "14",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "12-to-15",   from: "12",   to: "15",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "12-to-16",   from: "12",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "13-to-15",   from: "13",   to: "15",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "13-to-16",   from: "13",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "14-to-16",   from: "14",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
+          - { tag: "15-to-16",   from: "15",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
@@ -54,7 +58,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          config-inline: |
+          buildkitd-config-inline: |
             [registry."docker.io"]
               mirrors = ["mirror.gcr.io"]
 
@@ -77,6 +81,7 @@ jobs:
           context: .
           file: Dockerfile
           build-args: |
+            OLD_PG_IMAGE=postgres:${{ matrix.upgrade.from }}${{ matrix.upgrade.old_distro }}
             OLD_PG_VERSION=${{ matrix.upgrade.from }}
             NEW_PG_VERSION=${{ matrix.upgrade.to }}
             NEW_PG_DISTRO=${{ matrix.upgrade.distro }}
@@ -99,6 +104,9 @@ jobs:
     permissions:
       contents: read
       packages: read
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     strategy:
       fail-fast: false

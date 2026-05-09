@@ -11,9 +11,14 @@ ARG NEW_PG_VERSION=16
 # Bullseye carries libssl1.1, required by old-version binaries compiled on
 # Stretch or Buster. ICU version mismatches are handled separately below.
 ARG NEW_PG_DISTRO=bullseye
+# Full image spec for the old PG source stage. Active PG versions (12+) must
+# be pinned to a specific distro tag (e.g. postgres:13-bookworm) so that their
+# binaries are compiled against the same GLIBC as the runtime image. EOL
+# versions (9.6, 10, 11) use the untagged image since those are frozen.
+ARG OLD_PG_IMAGE=postgres:${OLD_PG_VERSION}
 
 # ── Stage 1: source old PostgreSQL binaries ───────────────────────────────
-FROM postgres:${OLD_PG_VERSION} AS old_binaries
+FROM ${OLD_PG_IMAGE} AS old_binaries
 # Collect ICU shared libraries into a known path so the runtime stage can
 # COPY them without hardcoding an arch-specific triplet directory.
 RUN mkdir /tmp/icu-libs && \
