@@ -3,7 +3,9 @@ set -euo pipefail
 
 OLD_DATA_DIR="/var/lib/postgresql/9.6/main"
 OLD_BIN="/usr/lib/postgresql/9.6/bin"
-PSQL="${OLD_BIN}/psql"
+# Use PG 16's psql — it is backward-compatible with PG 9.6 for all basic SQL,
+# and avoids the libreadline.so.7 vs .so.8 ABI mismatch on Bullseye.
+PSQL="/usr/lib/postgresql/16/bin/psql"
 
 echo "==> Initializing PostgreSQL 9.6 cluster at ${OLD_DATA_DIR}"
 "${OLD_BIN}/initdb" \
