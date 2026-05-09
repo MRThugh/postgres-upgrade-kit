@@ -46,9 +46,11 @@ The upgrade runs as three container steps sharing data through Docker volumes:
 
 ## Supported Upgrade Paths
 
-| From | To | Image tag |
+Images are published to **[abhsss/pg-upgrade on DockerHub](https://hub.docker.com/repository/docker/abhsss/pg-upgrade/general)**.
+
+| From | To | Pull command |
 |---|---|---|
-| PostgreSQL 9.6 | PostgreSQL 16 | `<user>/pg-upgrade:9.6-to-16` |
+| PostgreSQL 9.6 | PostgreSQL 16 | `docker pull abhsss/pg-upgrade:9.6-to-16` |
 
 More paths are planned. See [Adding a New Upgrade Path](#adding-a-new-upgrade-path).
 
@@ -89,18 +91,18 @@ docker volume create pg-new-data
 # 3. Seed PostgreSQL 9.6
 docker run --rm \
   -v pg-old-data:/var/lib/postgresql/9.6/main \
-  pg-upgrade:9.6-to-16 init-old
+  abhsss/pg-upgrade:9.6-to-16 init-old
 
 # 4. Upgrade to PostgreSQL 16
 docker run --rm \
   -v pg-old-data:/var/lib/postgresql/9.6/main \
   -v pg-new-data:/var/lib/postgresql/16/main \
-  pg-upgrade:9.6-to-16 upgrade
+  abhsss/pg-upgrade:9.6-to-16 upgrade
 
 # 5. Verify
 docker run --rm \
   -v pg-new-data:/var/lib/postgresql/16/main \
-  pg-upgrade:9.6-to-16 verify
+  abhsss/pg-upgrade:9.6-to-16 verify
 
 # 6. Cleanup
 docker volume rm pg-old-data pg-new-data
