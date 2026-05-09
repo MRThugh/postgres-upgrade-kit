@@ -7,40 +7,45 @@ on:
     branches: [main, master]
 
 jobs:
-  # ── Build and push all upgrade images to DockerHub ────────────────────────
+  # ── Build and push all upgrade images ────────────────────────────────────
+  # Pushes to GHCR (for CI test job — no rate limits) and DockerHub (public).
+  # GHA layer cache avoids re-pulling postgres base images on every run.
   build-and-push:
     name: Build ${{ matrix.upgrade.tag }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     strategy:
       fail-fast: false
       matrix:
         upgrade:
           # ── From 9.6 ──────────────────────────────────────────────────────
-          - { tag: "9.6-to-12",  dockerfile: "upgrades/9.6-to-12/Dockerfile"  }
-          - { tag: "9.6-to-13",  dockerfile: "upgrades/9.6-to-13/Dockerfile"  }
-          - { tag: "9.6-to-14",  dockerfile: "upgrades/9.6-to-14/Dockerfile"  }
-          - { tag: "9.6-to-15",  dockerfile: "upgrades/9.6-to-15/Dockerfile"  }
-          - { tag: "9.6-to-16",  dockerfile: "upgrades/9.6-to-16/Dockerfile"  }
+          - { tag: "9.6-to-12",  from: "9.6",  to: "12",  dockerfile: "upgrades/9.6-to-12/Dockerfile"  }
+          - { tag: "9.6-to-13",  from: "9.6",  to: "13",  dockerfile: "upgrades/9.6-to-13/Dockerfile"  }
+          - { tag: "9.6-to-14",  from: "9.6",  to: "14",  dockerfile: "upgrades/9.6-to-14/Dockerfile"  }
+          - { tag: "9.6-to-15",  from: "9.6",  to: "15",  dockerfile: "upgrades/9.6-to-15/Dockerfile"  }
+          - { tag: "9.6-to-16",  from: "9.6",  to: "16",  dockerfile: "upgrades/9.6-to-16/Dockerfile"  }
           # ── From 10 ───────────────────────────────────────────────────────
-          - { tag: "10-to-14",   dockerfile: "upgrades/10-to-14/Dockerfile"   }
-          - { tag: "10-to-15",   dockerfile: "upgrades/10-to-15/Dockerfile"   }
-          - { tag: "10-to-16",   dockerfile: "upgrades/10-to-16/Dockerfile"   }
+          - { tag: "10-to-14",   from: "10",   to: "14",  dockerfile: "upgrades/10-to-14/Dockerfile"   }
+          - { tag: "10-to-15",   from: "10",   to: "15",  dockerfile: "upgrades/10-to-15/Dockerfile"   }
+          - { tag: "10-to-16",   from: "10",   to: "16",  dockerfile: "upgrades/10-to-16/Dockerfile"   }
           # ── From 11 ───────────────────────────────────────────────────────
-          - { tag: "11-to-14",   dockerfile: "upgrades/11-to-14/Dockerfile"   }
-          - { tag: "11-to-15",   dockerfile: "upgrades/11-to-15/Dockerfile"   }
-          - { tag: "11-to-16",   dockerfile: "upgrades/11-to-16/Dockerfile"   }
+          - { tag: "11-to-14",   from: "11",   to: "14",  dockerfile: "upgrades/11-to-14/Dockerfile"   }
+          - { tag: "11-to-15",   from: "11",   to: "15",  dockerfile: "upgrades/11-to-15/Dockerfile"   }
+          - { tag: "11-to-16",   from: "11",   to: "16",  dockerfile: "upgrades/11-to-16/Dockerfile"   }
           # ── From 12 ───────────────────────────────────────────────────────
-          - { tag: "12-to-14",   dockerfile: "upgrades/12-to-14/Dockerfile"   }
-          - { tag: "12-to-15",   dockerfile: "upgrades/12-to-15/Dockerfile"   }
-          - { tag: "12-to-16",   dockerfile: "upgrades/12-to-16/Dockerfile"   }
+          - { tag: "12-to-14",   from: "12",   to: "14",  dockerfile: "upgrades/12-to-14/Dockerfile"   }
+          - { tag: "12-to-15",   from: "12",   to: "15",  dockerfile: "upgrades/12-to-15/Dockerfile"   }
+          - { tag: "12-to-16",   from: "12",   to: "16",  dockerfile: "upgrades/12-to-16/Dockerfile"   }
           # ── From 13 ───────────────────────────────────────────────────────
-          - { tag: "13-to-15",   dockerfile: "upgrades/13-to-15/Dockerfile"   }
-          - { tag: "13-to-16",   dockerfile: "upgrades/13-to-16/Dockerfile"   }
+          - { tag: "13-to-15",   from: "13",   to: "15",  dockerfile: "upgrades/13-to-15/Dockerfile"   }
+          - { tag: "13-to-16",   from: "13",   to: "16",  dockerfile: "upgrades/13-to-16/Dockerfile"   }
           # ── From 14 ───────────────────────────────────────────────────────
-          - { tag: "14-to-16",   dockerfile: "upgrades/14-to-16/Dockerfile"   }
+          - { tag: "14-to-16",   from: "14",   to: "16",  dockerfile: "upgrades/14-to-16/Dockerfile"   }
           # ── From 15 ───────────────────────────────────────────────────────
-          - { tag: "15-to-16",   dockerfile: "upgrades/15-to-16/Dockerfile"   }
+          - { tag: "15-to-16",   from: "15",   to: "16",  dockerfile: "upgrades/15-to-16/Dockerfile"   }
 
     steps:
       - name: Checkout
@@ -48,6 +53,13 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
@@ -62,16 +74,23 @@ jobs:
           file: ${{ matrix.upgrade.dockerfile }}
           push: true
           tags: |
+            ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}
             ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}
-          cache-to: type=inline
+          cache-from: |
+            type=gha,scope=${{ matrix.upgrade.tag }}
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.upgrade.tag }}
 
   # ── Run the full upgrade pipeline for every path ──────────────────────────
+  # Pulls from GHCR to avoid DockerHub rate limits entirely.
   test-upgrade:
     name: Test ${{ matrix.upgrade.tag }}
     runs-on: ubuntu-latest
     needs: build-and-push
+    permissions:
+      contents: read
+      packages: read
 
     strategy:
       fail-fast: false
@@ -97,9 +116,16 @@ jobs:
           - { tag: "15-to-16",   from: "15",   to: "16"  }
 
     steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Pull image
         run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
+          docker pull ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
 
       - name: Create volumes
         run: |
@@ -111,7 +137,8 @@ jobs:
         run: |
           docker run --rm \
             -v pg-old-${{ matrix.upgrade.from }}:/var/lib/postgresql/${{ matrix.upgrade.from }}/main \
-            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            -v pg-reports:/reports \
+            ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
             init-old
 
       - name: Upgrade ${{ matrix.upgrade.from }} → ${{ matrix.upgrade.to }}
@@ -120,7 +147,7 @@ jobs:
             -v pg-old-${{ matrix.upgrade.from }}:/var/lib/postgresql/${{ matrix.upgrade.from }}/main \
             -v pg-new-${{ matrix.upgrade.to }}:/var/lib/postgresql/${{ matrix.upgrade.to }}/main \
             -v pg-reports:/reports \
-            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
             upgrade
 
       - name: Verify PostgreSQL ${{ matrix.upgrade.to }}
@@ -128,14 +155,16 @@ jobs:
           docker run --rm \
             -v pg-new-${{ matrix.upgrade.to }}:/var/lib/postgresql/${{ matrix.upgrade.to }}/main \
             -v pg-reports:/reports \
-            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
             verify
 
       - name: Publish upgrade summary
         if: always()
         run: |
-          docker run --rm -v pg-reports:/reports alpine:3 cat /reports/upgrade.md \
-            >> "$GITHUB_STEP_SUMMARY" \
+          docker run --rm --entrypoint cat \
+            -v pg-reports:/reports \
+            ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            /reports/upgrade.md >> "$GITHUB_STEP_SUMMARY" \
           || echo "_No upgrade report generated._" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cleanup
