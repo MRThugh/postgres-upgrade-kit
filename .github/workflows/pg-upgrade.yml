@@ -22,30 +22,30 @@ jobs:
       matrix:
         upgrade:
           # ── From 9.6 ──────────────────────────────────────────────────────
-          - { tag: "9.6-to-12",  from: "9.6",  to: "12",  dockerfile: "upgrades/9.6-to-12/Dockerfile"  }
-          - { tag: "9.6-to-13",  from: "9.6",  to: "13",  dockerfile: "upgrades/9.6-to-13/Dockerfile"  }
-          - { tag: "9.6-to-14",  from: "9.6",  to: "14",  dockerfile: "upgrades/9.6-to-14/Dockerfile"  }
-          - { tag: "9.6-to-15",  from: "9.6",  to: "15",  dockerfile: "upgrades/9.6-to-15/Dockerfile"  }
-          - { tag: "9.6-to-16",  from: "9.6",  to: "16",  dockerfile: "upgrades/9.6-to-16/Dockerfile"  }
+          - { tag: "9.6-to-12",  from: "9.6",  to: "12"  }
+          - { tag: "9.6-to-13",  from: "9.6",  to: "13"  }
+          - { tag: "9.6-to-14",  from: "9.6",  to: "14"  }
+          - { tag: "9.6-to-15",  from: "9.6",  to: "15"  }
+          - { tag: "9.6-to-16",  from: "9.6",  to: "16"  }
           # ── From 10 ───────────────────────────────────────────────────────
-          - { tag: "10-to-14",   from: "10",   to: "14",  dockerfile: "upgrades/10-to-14/Dockerfile"   }
-          - { tag: "10-to-15",   from: "10",   to: "15",  dockerfile: "upgrades/10-to-15/Dockerfile"   }
-          - { tag: "10-to-16",   from: "10",   to: "16",  dockerfile: "upgrades/10-to-16/Dockerfile"   }
+          - { tag: "10-to-14",   from: "10",   to: "14"  }
+          - { tag: "10-to-15",   from: "10",   to: "15"  }
+          - { tag: "10-to-16",   from: "10",   to: "16"  }
           # ── From 11 ───────────────────────────────────────────────────────
-          - { tag: "11-to-14",   from: "11",   to: "14",  dockerfile: "upgrades/11-to-14/Dockerfile"   }
-          - { tag: "11-to-15",   from: "11",   to: "15",  dockerfile: "upgrades/11-to-15/Dockerfile"   }
-          - { tag: "11-to-16",   from: "11",   to: "16",  dockerfile: "upgrades/11-to-16/Dockerfile"   }
+          - { tag: "11-to-14",   from: "11",   to: "14"  }
+          - { tag: "11-to-15",   from: "11",   to: "15"  }
+          - { tag: "11-to-16",   from: "11",   to: "16"  }
           # ── From 12 ───────────────────────────────────────────────────────
-          - { tag: "12-to-14",   from: "12",   to: "14",  dockerfile: "upgrades/12-to-14/Dockerfile"   }
-          - { tag: "12-to-15",   from: "12",   to: "15",  dockerfile: "upgrades/12-to-15/Dockerfile"   }
-          - { tag: "12-to-16",   from: "12",   to: "16",  dockerfile: "upgrades/12-to-16/Dockerfile"   }
+          - { tag: "12-to-14",   from: "12",   to: "14"  }
+          - { tag: "12-to-15",   from: "12",   to: "15"  }
+          - { tag: "12-to-16",   from: "12",   to: "16"  }
           # ── From 13 ───────────────────────────────────────────────────────
-          - { tag: "13-to-15",   from: "13",   to: "15",  dockerfile: "upgrades/13-to-15/Dockerfile"   }
-          - { tag: "13-to-16",   from: "13",   to: "16",  dockerfile: "upgrades/13-to-16/Dockerfile"   }
+          - { tag: "13-to-15",   from: "13",   to: "15"  }
+          - { tag: "13-to-16",   from: "13",   to: "16"  }
           # ── From 14 ───────────────────────────────────────────────────────
-          - { tag: "14-to-16",   from: "14",   to: "16",  dockerfile: "upgrades/14-to-16/Dockerfile"   }
+          - { tag: "14-to-16",   from: "14",   to: "16"  }
           # ── From 15 ───────────────────────────────────────────────────────
-          - { tag: "15-to-16",   from: "15",   to: "16",  dockerfile: "upgrades/15-to-16/Dockerfile"   }
+          - { tag: "15-to-16",   from: "15",   to: "16"  }
 
     steps:
       - name: Checkout
@@ -75,7 +75,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.upgrade.dockerfile }}
+          file: Dockerfile
+          build-args: |
+            OLD_PG_VERSION=${{ matrix.upgrade.from }}
+            NEW_PG_VERSION=${{ matrix.upgrade.to }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}

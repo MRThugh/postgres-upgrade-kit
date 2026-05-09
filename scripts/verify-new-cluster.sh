@@ -97,7 +97,7 @@ printf "  %-25s %-15s %s\n" "--------" "----------" "----------"
 while IFS='|' read -r dbname new_size; do
   old_size="—"
   if [ -f "${OLD_DB_SIZES_FILE}" ]; then
-    old_size=$(grep "^${dbname}|" "${OLD_DB_SIZES_FILE}" | cut -d'|' -f2)
+    old_size=$(awk -F'|' -v db="${dbname}" '$1==db{print $2}' "${OLD_DB_SIZES_FILE}")
     [ -z "${old_size}" ] && old_size="—"
   fi
   printf "  %-25s %-15s %s\n" "${dbname}" "${old_size}" "${new_size}"
@@ -118,7 +118,7 @@ if has_report; then
   while IFS='|' read -r dbname new_size; do
     old_size="—"
     if [ -f "${OLD_DB_SIZES_FILE}" ]; then
-      old_size=$(grep "^${dbname}|" "${OLD_DB_SIZES_FILE}" | cut -d'|' -f2)
+      old_size=$(awk -F'|' -v db="${dbname}" '$1==db{print $2}' "${OLD_DB_SIZES_FILE}")
       [ -z "${old_size}" ] && old_size="—"
     fi
     rpt "| \`${dbname}\` | ${old_size} | ${new_size} |"
