@@ -49,8 +49,8 @@ compare_clusters() {
   printf "  %-35s %-10s %s\n" "(total)" "${old_total}" "${new_total}"
   while IFS= read -r dir; do
     [ -z "${dir}" ] && continue
-    old_size=$(grep "^${dir} " "${tmp_old}" | awk '{print $2}')
-    new_size=$(grep "^${dir} " "${tmp_new}" | awk '{print $2}')
+    old_size=$(awk -v d="${dir}" '$1==d{print $2}' "${tmp_old}")
+    new_size=$(awk -v d="${dir}" '$1==d{print $2}' "${tmp_new}")
     [ -z "${old_size}" ] && old_size="—"
     [ -z "${new_size}" ] && new_size="—"
     printf "  %-35s %-10s %s\n" "${dir}/" "${old_size}" "${new_size}"

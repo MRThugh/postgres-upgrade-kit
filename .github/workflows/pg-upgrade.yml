@@ -21,31 +21,31 @@ jobs:
       fail-fast: false
       matrix:
         upgrade:
-          # ── From 9.6 ──────────────────────────────────────────────────────
-          - { tag: "9.6-to-12",  from: "9.6",  to: "12"  }
-          - { tag: "9.6-to-13",  from: "9.6",  to: "13"  }
-          - { tag: "9.6-to-14",  from: "9.6",  to: "14"  }
-          - { tag: "9.6-to-15",  from: "9.6",  to: "15"  }
-          - { tag: "9.6-to-16",  from: "9.6",  to: "16"  }
-          # ── From 10 ───────────────────────────────────────────────────────
-          - { tag: "10-to-14",   from: "10",   to: "14"  }
-          - { tag: "10-to-15",   from: "10",   to: "15"  }
-          - { tag: "10-to-16",   from: "10",   to: "16"  }
-          # ── From 11 ───────────────────────────────────────────────────────
-          - { tag: "11-to-14",   from: "11",   to: "14"  }
-          - { tag: "11-to-15",   from: "11",   to: "15"  }
-          - { tag: "11-to-16",   from: "11",   to: "16"  }
-          # ── From 12 ───────────────────────────────────────────────────────
-          - { tag: "12-to-14",   from: "12",   to: "14"  }
-          - { tag: "12-to-15",   from: "12",   to: "15"  }
-          - { tag: "12-to-16",   from: "12",   to: "16"  }
-          # ── From 13 ───────────────────────────────────────────────────────
-          - { tag: "13-to-15",   from: "13",   to: "15"  }
-          - { tag: "13-to-16",   from: "13",   to: "16"  }
-          # ── From 14 ───────────────────────────────────────────────────────
-          - { tag: "14-to-16",   from: "14",   to: "16"  }
-          # ── From 15 ───────────────────────────────────────────────────────
-          - { tag: "15-to-16",   from: "15",   to: "16"  }
+          # ── From 9.6 (Stretch-based; needs bullseye for libssl1.1) ────────
+          - { tag: "9.6-to-12",  from: "9.6",  to: "12",  distro: "bullseye" }
+          - { tag: "9.6-to-13",  from: "9.6",  to: "13",  distro: "bullseye" }
+          - { tag: "9.6-to-14",  from: "9.6",  to: "14",  distro: "bullseye" }
+          - { tag: "9.6-to-15",  from: "9.6",  to: "15",  distro: "bullseye" }
+          - { tag: "9.6-to-16",  from: "9.6",  to: "16",  distro: "bullseye" }
+          # ── From 10 (Buster-based; needs bullseye for libssl1.1) ─────────
+          - { tag: "10-to-14",   from: "10",   to: "14",  distro: "bullseye" }
+          - { tag: "10-to-15",   from: "10",   to: "15",  distro: "bullseye" }
+          - { tag: "10-to-16",   from: "10",   to: "16",  distro: "bullseye" }
+          # ── From 11 (Bullseye-based; needs bullseye for libssl1.1) ───────
+          - { tag: "11-to-14",   from: "11",   to: "14",  distro: "bullseye" }
+          - { tag: "11-to-15",   from: "11",   to: "15",  distro: "bullseye" }
+          - { tag: "11-to-16",   from: "11",   to: "16",  distro: "bullseye" }
+          # ── From 12 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
+          - { tag: "12-to-14",   from: "12",   to: "14",  distro: "bookworm" }
+          - { tag: "12-to-15",   from: "12",   to: "15",  distro: "bookworm" }
+          - { tag: "12-to-16",   from: "12",   to: "16",  distro: "bookworm" }
+          # ── From 13 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
+          - { tag: "13-to-15",   from: "13",   to: "15",  distro: "bookworm" }
+          - { tag: "13-to-16",   from: "13",   to: "16",  distro: "bookworm" }
+          # ── From 14 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
+          - { tag: "14-to-16",   from: "14",   to: "16",  distro: "bookworm" }
+          # ── From 15 (Bookworm-based; needs bookworm for GLIBC 2.33+) ─────
+          - { tag: "15-to-16",   from: "15",   to: "16",  distro: "bookworm" }
 
     steps:
       - name: Checkout
@@ -79,6 +79,7 @@ jobs:
           build-args: |
             OLD_PG_VERSION=${{ matrix.upgrade.from }}
             NEW_PG_VERSION=${{ matrix.upgrade.to }}
+            NEW_PG_DISTRO=${{ matrix.upgrade.distro }}
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
