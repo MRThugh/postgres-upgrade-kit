@@ -38,6 +38,24 @@ done
 
 [ -z "${PKGS// /}" ] && exit 0
 
+# Debian Stretch (postgres:9.6, postgres:11) and Buster (postgres:10) are EOL
+# and their packages moved to archive.debian.org. The PGDG repos for these
+# codenames are gone entirely. Redirect before apt-get update to avoid 404s.
+fix_eol_sources() {
+  for codename in stretch buster; do
+    if grep -qr "${codename}" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+      sed -i \
+        -e 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' \
+        -e 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' \
+        -e "/${codename}-updates/d" \
+        /etc/apt/sources.list 2>/dev/null || true
+      find /etc/apt/sources.list.d/ -name '*.list' \
+        -exec sed -i "/${codename}/d" {} \; 2>/dev/null || true
+    fi
+  done
+}
+fix_eol_sources
+
 apt-get update -qq
 # shellcheck disable=SC2086
 apt-get install -y --no-install-recommends ${PKGS}
