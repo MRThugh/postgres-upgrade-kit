@@ -1,10 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-OLD_DATA_DIR="/var/lib/postgresql/9.6/main"
-NEW_DATA_DIR="/var/lib/postgresql/16/main"
-OLD_BIN="/usr/lib/postgresql/9.6/bin"
-NEW_BIN="/usr/lib/postgresql/16/bin"
+OLD_PG_VERSION="${OLD_PG_VERSION:?OLD_PG_VERSION env var must be set}"
+NEW_PG_VERSION="${NEW_PG_VERSION:?NEW_PG_VERSION env var must be set}"
+OLD_DATA_DIR="/var/lib/postgresql/${OLD_PG_VERSION}/main"
+NEW_DATA_DIR="/var/lib/postgresql/${NEW_PG_VERSION}/main"
+OLD_BIN="/usr/lib/postgresql/${OLD_PG_VERSION}/bin"
+NEW_BIN="/usr/lib/postgresql/${NEW_PG_VERSION}/bin"
 WORK_DIR="/var/lib/postgresql"
 
 # pg_upgrade writes log files and post-upgrade scripts (analyze_new_cluster.sh,
@@ -12,7 +14,7 @@ WORK_DIR="/var/lib/postgresql"
 # writable by the postgres user.
 cd "${WORK_DIR}"
 
-echo "==> Initializing PostgreSQL 16 cluster at ${NEW_DATA_DIR}"
+echo "==> Initializing PostgreSQL ${NEW_PG_VERSION} cluster at ${NEW_DATA_DIR}"
 "${NEW_BIN}/initdb" \
   -D "${NEW_DATA_DIR}" \
   --encoding=UTF8 \
@@ -34,11 +36,10 @@ echo "==> Compatibility check passed. Running pg_upgrade"
   -D "${NEW_DATA_DIR}"
 
 echo "==> Running post-upgrade ANALYZE on all databases"
-if [ -f ./analyze_new_cluster.sh ]; then
-  # pg_upgrade writes this script to the current working directory
-  bash ./analyze_new_cluster.sh
+if [ -f "${WORK_DIR}/analyze_new_cluster.sh" ]; then
+  bash "${WORK_DIR}/analyze_new_cluster.sh"
 else
-  echo "    (analyze_new_cluster.sh not found — skipping; run manually if needed)"
+  echo "    (analyze_new_cluster.sh not found — skipping)"
 fi
 
-echo "==> pg_upgrade complete. New cluster is at ${NEW_DATA_DIR}"
+echo "==> pg_upgrade complete. PostgreSQL ${OLD_PG_VERSION} → ${NEW_PG_VERSION} done."

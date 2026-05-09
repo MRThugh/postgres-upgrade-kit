@@ -1,4 +1,4 @@
-name: PostgreSQL 9.6 → 16 Upgrade Pipeline
+name: PostgreSQL Upgrade Pipeline
 
 on:
   push:
@@ -6,14 +6,22 @@ on:
   pull_request:
     branches: [main, master]
 
-env:
-  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade
-
 jobs:
-  # ── Job 1: Build image and push to DockerHub ─────────────────────────────
+  # ── Build image and push to DockerHub ─────────────────────────────────────
   build-and-push:
-    name: Build & Push Docker Image
+    name: Build & Push (${{ matrix.upgrade.tag }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        upgrade:
+          - tag: "9.6-to-16"
+            dockerfile: "upgrades/9.6-to-16/Dockerfile"
+          # Add new upgrade paths here, e.g.:
+          # - tag: "13-to-16"
+          #   dockerfile: "upgrades/13-to-16/Dockerfile"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,52 +39,66 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ${{ matrix.upgrade.dockerfile }}
           push: true
           tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
-          cache-from: type=registry,ref=${{ env.IMAGE }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}
           cache-to: type=inline
 
-  # ── Job 2: Run the full upgrade pipeline ─────────────────────────────────
+  # ── Run the full upgrade pipeline ─────────────────────────────────────────
   test-upgrade:
-    name: Test pg_upgrade (9.6 → 16)
+    name: Test Upgrade (${{ matrix.upgrade.tag }})
     runs-on: ubuntu-latest
     needs: build-and-push
 
+    strategy:
+      fail-fast: false
+      matrix:
+        upgrade:
+          - tag: "9.6-to-16"
+            from_version: "9.6"
+            to_version: "16"
+
     steps:
-      - name: Pull pg-upgrade image
-        run: docker pull ${{ env.IMAGE }}:${{ github.sha }}
+      - name: Pull image
+        run: |
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }}
 
       - name: Create Docker volumes
         run: |
-          docker volume create pg-old-data
-          docker volume create pg-new-data
+          docker volume create pg-old-data-${{ matrix.upgrade.from_version }}
+          docker volume create pg-new-data-${{ matrix.upgrade.to_version }}
 
-      # ── Step A: Initialize PostgreSQL 9.6 with test data ────────────────
-      - name: Initialize PostgreSQL 9.6 cluster and seed test databases
+      # Step A: Initialise PostgreSQL <old> with test data
+      - name: Init PostgreSQL ${{ matrix.upgrade.from_version }} cluster
         run: |
           docker run --rm \
-            -v pg-old-data:/var/lib/postgresql/9.6/main \
-            ${{ env.IMAGE }}:${{ github.sha }} init-old
+            -v pg-old-data-${{ matrix.upgrade.from_version }}:/var/lib/postgresql/${{ matrix.upgrade.from_version }}/main \
+            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            init-old
 
-      # ── Step B: Upgrade from 9.6 to 16 via pg_upgrade ──────────────────
-      - name: Run pg_upgrade (9.6 → 16)
+      # Step B: Upgrade via pg_upgrade
+      - name: Run pg_upgrade (${{ matrix.upgrade.from_version }} → ${{ matrix.upgrade.to_version }})
         run: |
           docker run --rm \
-            -v pg-old-data:/var/lib/postgresql/9.6/main \
-            -v pg-new-data:/var/lib/postgresql/16/main \
-            ${{ env.IMAGE }}:${{ github.sha }} upgrade
+            -v pg-old-data-${{ matrix.upgrade.from_version }}:/var/lib/postgresql/${{ matrix.upgrade.from_version }}/main \
+            -v pg-new-data-${{ matrix.upgrade.to_version }}:/var/lib/postgresql/${{ matrix.upgrade.to_version }}/main \
+            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            upgrade
 
-      # ── Step C: Verify the upgraded PostgreSQL 16 cluster ───────────────
-      - name: Verify PostgreSQL 16 cluster integrity
+      # Step C: Verify the upgraded cluster
+      - name: Verify PostgreSQL ${{ matrix.upgrade.to_version }} cluster
         run: |
           docker run --rm \
-            -v pg-new-data:/var/lib/postgresql/16/main \
-            ${{ env.IMAGE }}:${{ github.sha }} verify
+            -v pg-new-data-${{ matrix.upgrade.to_version }}:/var/lib/postgresql/${{ matrix.upgrade.to_version }}/main \
+            ${{ secrets.DOCKERHUB_USERNAME }}/pg-upgrade:${{ matrix.upgrade.tag }}-${{ github.sha }} \
+            verify
 
-      # ── Cleanup ──────────────────────────────────────────────────────────
-      - name: Remove Docker volumes
+      - name: Cleanup volumes
         if: always()
         run: |
-          docker volume rm pg-old-data pg-new-data || true
+          docker volume rm \
+            pg-old-data-${{ matrix.upgrade.from_version }} \
+            pg-new-data-${{ matrix.upgrade.to_version }} || true

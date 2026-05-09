@@ -1,13 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-OLD_DATA_DIR="/var/lib/postgresql/9.6/main"
-OLD_BIN="/usr/lib/postgresql/9.6/bin"
-# Use PG 16's psql — it is backward-compatible with PG 9.6 for all basic SQL,
-# and avoids the libreadline.so.7 vs .so.8 ABI mismatch on Bullseye.
-PSQL="/usr/lib/postgresql/16/bin/psql"
+OLD_PG_VERSION="${OLD_PG_VERSION:?OLD_PG_VERSION env var must be set}"
+NEW_PG_VERSION="${NEW_PG_VERSION:?NEW_PG_VERSION env var must be set}"
+OLD_DATA_DIR="/var/lib/postgresql/${OLD_PG_VERSION}/main"
+OLD_BIN="/usr/lib/postgresql/${OLD_PG_VERSION}/bin"
+# Use the new version's psql — it is backward-compatible with older servers
+# and avoids libreadline ABI mismatches between the source and target distros.
+PSQL="/usr/lib/postgresql/${NEW_PG_VERSION}/bin/psql"
 
-echo "==> Initializing PostgreSQL 9.6 cluster at ${OLD_DATA_DIR}"
+echo "==> Initializing PostgreSQL ${OLD_PG_VERSION} cluster at ${OLD_DATA_DIR}"
 "${OLD_BIN}/initdb" \
   -D "${OLD_DATA_DIR}" \
   --encoding=UTF8 \
@@ -17,13 +19,13 @@ echo "==> Initializing PostgreSQL 9.6 cluster at ${OLD_DATA_DIR}"
 echo "host all all 127.0.0.1/32 trust" >> "${OLD_DATA_DIR}/pg_hba.conf"
 echo "host all all ::1/128 trust"       >> "${OLD_DATA_DIR}/pg_hba.conf"
 
-echo "==> Starting PostgreSQL 9.6"
+echo "==> Starting PostgreSQL ${OLD_PG_VERSION}"
 "${OLD_BIN}/pg_ctl" -D "${OLD_DATA_DIR}" -l "${OLD_DATA_DIR}/pg.log" start -w
 
 echo "==> Creating testdb with schema-heavy fixtures"
-"${PSQL}" -U postgres -c "CREATE DATABASE testdb;"
+"${PSQL}" -U postgres -h 127.0.0.1 -c "CREATE DATABASE testdb;"
 
-"${PSQL}" -U postgres -d testdb <<'SQL'
+"${PSQL}" -U postgres -h 127.0.0.1 -d testdb <<'SQL'
 CREATE TABLE users (
     id         SERIAL PRIMARY KEY,
     name       VARCHAR(100) NOT NULL,
@@ -52,9 +54,9 @@ CREATE VIEW active_orders AS
 CREATE SEQUENCE invoice_seq START 1000 INCREMENT 1;
 
 INSERT INTO users (name, email) VALUES
-    ('Alice Smith',   'alice@example.com'),
-    ('Bob Johnson',   'bob@example.com'),
-    ('Carol Williams','carol@example.com');
+    ('Alice Smith',    'alice@example.com'),
+    ('Bob Johnson',    'bob@example.com'),
+    ('Carol Williams', 'carol@example.com');
 
 INSERT INTO orders (user_id, amount, status) VALUES
     (1, 99.99,  'pending'),
@@ -64,9 +66,9 @@ INSERT INTO orders (user_id, amount, status) VALUES
 SQL
 
 echo "==> Creating analytics database"
-"${PSQL}" -U postgres -c "CREATE DATABASE analytics;"
+"${PSQL}" -U postgres -h 127.0.0.1 -c "CREATE DATABASE analytics;"
 
-"${PSQL}" -U postgres -d analytics <<'SQL'
+"${PSQL}" -U postgres -h 127.0.0.1 -d analytics <<'SQL'
 CREATE TABLE events (
     id         BIGSERIAL PRIMARY KEY,
     event_type VARCHAR(50) NOT NULL,
@@ -95,7 +97,7 @@ CREATE MATERIALIZED VIEW daily_event_counts AS
 CREATE INDEX idx_daily_event_counts_day ON daily_event_counts(day);
 SQL
 
-echo "==> Stopping PostgreSQL 9.6"
+echo "==> Stopping PostgreSQL ${OLD_PG_VERSION}"
 "${OLD_BIN}/pg_ctl" -D "${OLD_DATA_DIR}" stop -m fast
 
-echo "==> PostgreSQL 9.6 cluster initialized with test data."
+echo "==> PostgreSQL ${OLD_PG_VERSION} cluster initialized with test data."
