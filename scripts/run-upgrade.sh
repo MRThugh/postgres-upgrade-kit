@@ -89,6 +89,18 @@ echo "==> Initializing PostgreSQL ${NEW_PG_VERSION} cluster at ${NEW_DATA_DIR}"
 
 # ── Compatibility check ───────────────────────────────────────────────────────
 
+_print_pg_upgrade_logs() {
+  local out_dir
+  out_dir=$(find "${NEW_DATA_DIR}/pg_upgrade_output.d" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort | tail -1)
+  [ -z "${out_dir}" ] && return
+  for f in "${out_dir}"/loadable_libraries.txt "${out_dir}"/log/*.log; do
+    [ -f "${f}" ] || continue
+    echo "==> $(basename "${f}"):"
+    cat "${f}"
+    echo ""
+  done
+}
+
 echo ""
 echo "==> Running pg_upgrade compatibility check (dry run)"
 "${NEW_BIN}/pg_upgrade" \
@@ -96,7 +108,7 @@ echo "==> Running pg_upgrade compatibility check (dry run)"
   -B "${NEW_BIN}" \
   -d "${OLD_DATA_DIR}" \
   -D "${NEW_DATA_DIR}" \
-  --check
+  --check || { _print_pg_upgrade_logs; exit 1; }
 
 # ── Real upgrade ──────────────────────────────────────────────────────────────
 
