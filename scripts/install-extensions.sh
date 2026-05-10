@@ -12,7 +12,10 @@ EXTENSIONS_CSV="${2:-}"
 pkg_for() {
   local ext="${1}" ver="${2}"
   case "${ext}" in
-    postgis)      echo "postgresql-${ver}-postgis-3" ;;
+    postgis)
+      # postgis/postgis base images already ship PostGIS; skip apt install
+      [ -f "/usr/share/postgresql/${ver}/extension/postgis.control" ] && return
+      echo "postgresql-${ver}-postgis-3" ;;
     pgvector)     echo "postgresql-${ver}-pgvector" ;;
     pg_partman)   echo "postgresql-${ver}-partman" ;;
     pgrouting)    echo "postgresql-${ver}-pgrouting" ;;

@@ -48,14 +48,14 @@ jobs:
           - { tag: "14-to-16",   from: "14",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
           - { tag: "15-to-16",   from: "15",   to: "16",  old_distro: "-bookworm", distro: "bookworm" }
           # ── PostGIS extension flavor ──────────────────────────────────────
-          # postgres:9.6 and the untagged postgres:11 are frozen on Debian
-          # Stretch, which has no PostGIS 3 package (PGDG stretch is gone)
-          # and no upgrade path from the available PostGIS 2.3 to 3.x.
-          # Use postgres:11-bullseye which carries PostGIS 3 via PGDG bullseye.
-          # PG 9.6 + PostGIS is untestable until a bullseye-based 9.6 image exists.
-          - { tag: "11-to-16-postgis", from: "11", to: "16", old_distro: "-bullseye", distro: "bullseye", extensions: "postgis" }
-          - { tag: "13-to-16-postgis", from: "13", to: "16", old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
-          - { tag: "15-to-16-postgis", from: "15", to: "16", old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
+          # Use postgis/postgis pre-built images as OLD_PG_IMAGE so PostGIS
+          # is already present in Stage 1 — no apt install needed, no PGDG
+          # repo availability issues. install-extensions.sh detects the
+          # .control file and skips the redundant apt-get call.
+          - { tag: "9.6-to-16-postgis",  from: "9.6", to: "16", old_image: "postgis/postgis:9.6-3.0", old_distro: "",          distro: "bullseye", extensions: "postgis" }
+          - { tag: "11-to-16-postgis",   from: "11",  to: "16", old_image: "postgis/postgis:11-3.1",  old_distro: "-bullseye", distro: "bullseye", extensions: "postgis" }
+          - { tag: "13-to-16-postgis",   from: "13",  to: "16", old_image: "postgis/postgis:13-3.4",  old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
+          - { tag: "15-to-16-postgis",   from: "15",  to: "16", old_image: "postgis/postgis:15-3.4",  old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
 
     steps:
       - name: Checkout
@@ -87,7 +87,7 @@ jobs:
           context: .
           file: Dockerfile
           build-args: |
-            OLD_PG_IMAGE=postgres:${{ matrix.upgrade.from }}${{ matrix.upgrade.old_distro }}
+            OLD_PG_IMAGE=${{ matrix.upgrade.old_image || format('postgres:{0}{1}', matrix.upgrade.from, matrix.upgrade.old_distro) }}
             OLD_PG_VERSION=${{ matrix.upgrade.from }}
             NEW_PG_VERSION=${{ matrix.upgrade.to }}
             NEW_PG_DISTRO=${{ matrix.upgrade.distro }}
@@ -134,9 +134,10 @@ jobs:
           - { tag: "13-to-16",   from: "13",   to: "16"  }
           - { tag: "14-to-16",   from: "14",   to: "16"  }
           - { tag: "15-to-16",   from: "15",   to: "16"  }
-          - { tag: "11-to-16-postgis", from: "11", to: "16" }
-          - { tag: "13-to-16-postgis", from: "13", to: "16" }
-          - { tag: "15-to-16-postgis", from: "15", to: "16" }
+          - { tag: "9.6-to-16-postgis",  from: "9.6", to: "16" }
+          - { tag: "11-to-16-postgis",   from: "11",  to: "16" }
+          - { tag: "13-to-16-postgis",   from: "13",  to: "16" }
+          - { tag: "15-to-16-postgis",   from: "15",  to: "16" }
 
     steps:
       - name: Log in to GHCR
