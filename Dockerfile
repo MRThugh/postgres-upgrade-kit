@@ -36,6 +36,15 @@ RUN chmod +x /tmp/install-extensions.sh && \
 RUN mkdir /tmp/icu-libs && \
     find /usr/lib -name 'libicu*.so*' ! -name '*.a' -exec cp {} /tmp/icu-libs/ \;
 
+# Collect PostGIS dependency .so files (libproj, libgdal, libgeos) so the
+# runtime can load old extension binaries even when distro library versions
+# differ (e.g. Stretch libproj.so.12 vs Bullseye libproj.so.19).
+RUN mkdir /tmp/postgis-ext-libs && \
+    find /usr/lib -maxdepth 3 \
+      \( -name 'libgeos*.so*' -o -name 'libproj*.so*' -o -name 'libgdal*.so*' \) \
+      ! -name '*.a' ! -name '*.la' \
+      -exec cp {} /tmp/postgis-ext-libs/ \; 2>/dev/null || true
+
 # ── Stage 2: runtime image ────────────────────────────────────────────────
 FROM postgres:${NEW_PG_VERSION}-${NEW_PG_DISTRO}
 
@@ -68,7 +77,10 @@ COPY --from=old_binaries /usr/share/postgresql/${OLD_PG_VERSION} /usr/share/post
 # Place them in an isolated directory — versioned sonames (*.so.57, *.so.67)
 # ensure each binary loads only its own version with no conflict.
 COPY --from=old_binaries /tmp/icu-libs/ /usr/lib/postgresql/icu-compat/
-RUN echo /usr/lib/postgresql/icu-compat > /etc/ld.so.conf.d/pg-icu-compat.conf && ldconfig
+COPY --from=old_binaries /tmp/postgis-ext-libs/ /usr/lib/postgresql/postgis-ext-compat/
+RUN echo /usr/lib/postgresql/icu-compat        >  /etc/ld.so.conf.d/pg-compat.conf && \
+    echo /usr/lib/postgresql/postgis-ext-compat >> /etc/ld.so.conf.d/pg-compat.conf && \
+    ldconfig
 
 RUN mkdir -p \
       /var/lib/postgresql/${OLD_PG_VERSION}/main \

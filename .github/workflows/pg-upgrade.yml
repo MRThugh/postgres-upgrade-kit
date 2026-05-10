@@ -54,8 +54,8 @@ jobs:
           # .control file and skips the redundant apt-get call.
           - { tag: "9.6-to-16-postgis",  from: "9.6", to: "16", old_image: "postgis/postgis:9.6-3.0", old_distro: "",          distro: "bullseye", extensions: "postgis" }
           - { tag: "11-to-16-postgis",   from: "11",  to: "16", old_image: "postgis/postgis:11-3.1",  old_distro: "-bullseye", distro: "bullseye", extensions: "postgis" }
-          - { tag: "13-to-16-postgis",   from: "13",  to: "16", old_image: "postgis/postgis:13-3.4",  old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
-          - { tag: "15-to-16-postgis",   from: "15",  to: "16", old_image: "postgis/postgis:15-3.4",  old_distro: "-bookworm", distro: "bookworm", extensions: "postgis" }
+          - { tag: "13-to-16-postgis",   from: "13",  to: "16", old_image: "postgis/postgis:13-3.4",  old_distro: "-bookworm", distro: "bullseye", extensions: "postgis" }
+          - { tag: "15-to-16-postgis",   from: "15",  to: "16", old_image: "postgis/postgis:15-3.4",  old_distro: "-bookworm", distro: "bullseye", extensions: "postgis" }
 
     steps:
       - name: Checkout
