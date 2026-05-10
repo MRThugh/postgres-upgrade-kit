@@ -177,7 +177,7 @@ jobs:
               -e "NEW_PG_VERSION=${{ matrix.upgrade.to }}" \
               -e "EXTENSIONS=${{ matrix.upgrade.extensions }}" \
               "${{ matrix.upgrade.old_image }}" \
-              bash -c 'mkdir -p /reports && chown postgres:postgres /reports && exec gosu postgres bash /init-old-cluster.sh'
+              bash -c 'mkdir -p /reports "/var/lib/postgresql/${OLD_PG_VERSION}/main" && chown postgres:postgres /reports "/var/lib/postgresql/${OLD_PG_VERSION}/main" && exec gosu postgres bash /init-old-cluster.sh'
           else
             docker run --rm \
               -v "pg-old-${{ matrix.upgrade.from }}:/var/lib/postgresql/${{ matrix.upgrade.from }}/main" \
